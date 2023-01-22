@@ -1,0 +1,31 @@
+---
+title: "GSE Report"
+format: pdf
+documentclass: article
+---
+
+```{r setup, include = FALSE}
+source("survey-data-processing.R")
+```
+
+
+# Title
+
+This is some text
+
+## Subtitle
+
+This is some code output
+```{r demo-code-output, echo=FALSE}
+nrow(raw_survey_data)
+```
+
+This is a plot
+```{r demo-chart, echo=FALSE}
+ggplot(data = tidy_survey_data) +
+  geom_bar(aes(x = AGE)) +
+  ggtitle("Survey Respondants by Age Group") +
+  theme_light()
+```
+
+
