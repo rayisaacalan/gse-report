@@ -2,30 +2,146 @@
 title: "GSE Report"
 format: pdf
 documentclass: article
+keep-tex: true
 ---
 
 ```{r setup, include = FALSE}
 source("survey-data-processing.R")
+N_response = nrow(tidy_survey_data)
+library(kableExtra)
 ```
 
 
-# Title
+# Descriptive Statistics
 
-This is some text
+## Response Demographics
 
-## Subtitle
+```{r base-plot, include=FALSE}
+label_truncate = function(string, length){
+  str_trunc(string, length, side = "right")
+}
 
-This is some code output
-```{r demo-code-output, echo=FALSE}
-nrow(raw_survey_data)
+base_plot = function(label_length) {
+  ggplot(tidy_survey_data) + 
+  theme(axis.text.x = element_text(angle=60, hjust=1), legend.position = "bottom") +
+  scale_x_discrete(labels = ~label_truncate(., length = label_length)) +
+  ylim(0, NA)
+}
 ```
 
-This is a plot
-```{r demo-chart, echo=FALSE}
-ggplot(data = tidy_survey_data) +
+```{r department, echo=FALSE}
+base_plot(12) +
+  geom_bar(aes(x = fct_infreq(DEPT))) +
+  labs(x = "Department", y = "Response Count")
+```
+```{r year, echo=FALSE}
+base_plot(12) +
+  geom_bar(aes(x = YEAR)) +
+  labs(x = "Program Year", y = "Response Count")
+```
+
+```{r age, echo=FALSE}
+base_plot(12) +
   geom_bar(aes(x = AGE)) +
-  ggtitle("Survey Respondants by Age Group") +
-  theme_light()
+  labs(x = "Age Bracket", y = "Response Count")
 ```
+
+```{r raceth, echo=FALSE}
+base_plot(18) +
+  geom_bar(aes(x = fct_infreq(RACETH))) +
+  labs(x = "DARS Ethnicity Category", y = "Response Count")
+```
+
+
+
+## Respondent Needs
+
+```{r unmet-needs, echo=FALSE}
+summarise(tidy_survey_data,
+          'Food' = round(sum(NEEDFOOD, na.rm = TRUE)*100/N_response, 1),
+          'Medical / Medicine' = round(sum(NEEDMEDICAL, na.rm = TRUE)*100/N_response, 1),
+          'Mental Health' = round(sum(NEEDMENTAL, na.rm = TRUE)*100/N_response, 1),
+          'Other' = round(sum(NEEDOTHER, na.rm = TRUE)*100/N_response, 1)) %>%
+  kableExtra::kable(caption = "\\% Of Respondents Going Without Needs") %>%
+  kable_styling(position = "center")
+```
+
+```{r rent, echo=FALSE}
+base_plot(18) +
+  geom_bar(aes(x = PERINCRENT, fill = ROOMIE), position = "stack") +
+  labs(x = "Pct. of Income Spent on Rent", y = "Response Count", fill = "Roomate")
+```
+
+```{r rent-no-roommate, echo=FALSE}
+base_plot(18) +
+  geom_bar(aes(x = PERINCTMR)) +
+  labs(x = "Pct. of Income Spent on Rent if No Roommate", y = "Response Count")
+```
+
+```{r transportation, echo=FALSE, warning=FALSE, message=FALSE}
+base_plot(18) +
+  geom_bar(aes(x = TRANSPO)) +
+  labs(x = "Pct. of Income Spent on Transportation", y = "Response Count") +
+  scale_x_discrete(limits = c(levels(tidy_survey_data$PERINCRENT), NA))
+  
+```
+
+```{r academics, echo=FALSE}
+base_plot(18) +
+  geom_bar(aes(x = ACADCOST)) +
+  labs(x = "Pct. of Income Spent on Academic Costs", y = "Response Count")
+```
+
+```{r unexpected-expense, echo=FALSE}
+base_plot(18) +
+  geom_bar(aes(x = EXPNSE)) +
+  labs(x = "Able to Pay Unexpected Emergency Expense", y = "Response Count")
+```
+
+```{r netincome, echo=FALSE, warning=FALSE, message=FALSE}
+ggplot(tidy_survey_data) +
+  geom_histogram(aes(x = NETINC, fill = EXTRNLFUNDED), bins = 20) +
+  labs(x = "Monthly Individual Net Income ($)", y = "Response Count", fill = "External Funding") +
+  lims(x = c(1000, 4000), y = c(0, 20)) + 
+  theme(axis.text.x = element_text(angle=60, hjust=1), legend.position = "bottom")
+```
+
+
+```{r current-sem-support, echo=FALSE}
+summarise(tidy_survey_data,
+          'Friends, Family, Spouse' = round(sum(PERSONALREL1, na.rm = TRUE)*100/N_response, 1),
+          'University Scholarship' = round(sum(UNIVSCHOLSHP1, na.rm = TRUE)*100/N_response, 1),
+          'Food Bank' = round(sum(FOODBANK1, na.rm = TRUE)*100/N_response, 1),
+          'External Orgs' = round(sum(EXTORG1, na.rm = TRUE)*100/N_response, 1),
+          'Loans' = round(sum(LOANS1, na.rm = TRUE)*100/N_response, 1),
+          'External Work' = round(sum(EXTWORK1, na.rm = TRUE)*100/N_response, 1)) %>%
+  kableExtra::kable(caption = "\\% Of Respondents Relying on Support This Semester") %>%
+  kable_styling(position = "center", latex_options = "scale_down")
+```
+
+```{r previous-sem-support, echo=FALSE}
+summarise(tidy_survey_data,
+          'Friends, Family, Spouse' = round(sum(PERSONALREL2, na.rm = TRUE)*100/N_response, 1),
+          'University Scholarship' = round(sum(UNIVSCHOLSHP2, na.rm = TRUE)*100/N_response, 1),
+          'Food Bank' = round(sum(FOODBANK2, na.rm = TRUE)*100/N_response, 1),
+          'External Orgs' = round(sum(EXTORG2, na.rm = TRUE)*100/N_response, 1),
+          'Loans' = round(sum(LOANS2, na.rm = TRUE)*100/N_response, 1),
+          'External Work' = round(sum(EXTWORK2, na.rm = TRUE)*100/N_response, 1)) %>%
+  kableExtra::kable(caption = "\\% Of Respondents Relying on Support in Previous Semesters", format = "latex") %>%
+  kable_styling(position = "center", latex_options = "scale_down")
+```
+
+```{r work-hrs, echo=FALSE}
+base_plot(18) +
+  geom_bar(aes(x = HRSWORK)) +
+  labs(x = "Hours Worked per Week", y = "Response Count")
+```
+
+
+
+
+
+
+
 
 

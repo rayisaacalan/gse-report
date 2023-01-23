@@ -62,16 +62,16 @@ tidy_survey_data = raw_survey_data %>%
          GRANTS = str_detect(FUNDSOURCE, "Grants"),
          EXTRNL = str_detect(FUNDSOURCE, "External"),
          .after = INTNTL) %>%
-  # Since NETINC interpretation depends on whether funding is received from
-  # university, create feature for income outside UNIV source
-  # This isn't perfect because there could be for example internal fellowships
+# Since NETINC interpretation depends on whether funding is received from
+# university, create feature for income outside UNIV source
+# This isn't perfect because there could be for example internal fellowships
   mutate(EXTRNLFUNDED = FELLSHP | GRANTS | EXTRNL,
          .after = EXTRNL) %>%
-  # Break out NETINC into university and external income columns
+# Break out NETINC into university and external income columns
   mutate(UNIVNETINC = (!EXTRNLFUNDED)*NETINC,
          EXTRNLINC = (EXTRNLFUNDED)*NETINC,
          .after = GURNT) %>%
-  # Break out SUPP1 into individual features
+# Break out SUPP1 into individual features
   mutate(UNIVSCHOLSHP1 = str_detect(SUPP1, "University"),
          FOODBANK1 = str_detect(SUPP1, "Food"),
          PERSONALREL1 = str_detect(SUPP1, "Family"),
@@ -79,7 +79,7 @@ tidy_survey_data = raw_survey_data %>%
          LOANS1 = str_detect(SUPP1, c("Loans|loans")),
          EXTWORK1 = str_detect(SUPP1, c("jobs|hustle|tutoring")),
          .after = SOCIALSUP1) %>% 
-  # Break out SUPP2 into individual features
+# Break out SUPP2 into individual features
   mutate(UNIVSCHOLSHP2 = str_detect(SUPP2, "University"),
          FOODBANK2 = str_detect(SUPP2, "Food"),
          PERSONALREL2 = str_detect(SUPP2, "Family"),
@@ -87,9 +87,9 @@ tidy_survey_data = raw_survey_data %>%
          LOANS2 = str_detect(SUPP2, c("Loans|loans")),
          EXTWORK2 = str_detect(SUPP2, c("jobs|hustle|tutoring")),
          .after = SOCIALSUP2) %>%
-  # Refactor WITHOUT as logical
+# Refactor WITHOUT as logical
   mutate(WITHOUT = str_detect(WITHOUT, "Yes|Groceries")) %>%
-  # Break out NEED into individual features
+# Break out NEED into individual features
   mutate(NEEDMEDICAL = str_detect(NEED, 
                                   "Medical|medication|medicate|medical|tests|Medicine|vision|eye"),
          NEEDMENTAL = str_detect(NEED,
@@ -99,8 +99,8 @@ tidy_survey_data = raw_survey_data %>%
          .after = WITHOUT) %>%
   mutate(NEEDOTHER = WITHOUT & is.na(NEED),
          .after = NEEDFOOD) %>%
-  # Refactor INTNTL, SPOUSE, SOCIALSUP1, SOCIALSUP2, ROOMIE, CANSAVE, 
-  # STIPENDCHNG as logical  
+# Refactor INTNTL, SPOUSE, SOCIALSUP1, SOCIALSUP2, ROOMIE, CANSAVE, 
+# STIPENDCHNG as logical  
   mutate(INTNTL = str_detect(INTNTL, "Yes"),
          SPOUSE = str_detect(SPOUSE, "Yes"),
          SOCIALSUP1 = str_detect(SOCIALSUP1, "Yes"),
@@ -108,8 +108,8 @@ tidy_survey_data = raw_survey_data %>%
          ROOMIE = str_detect(ROOMIE, "Yes|Spouse"),
          CANSAVE = str_detect(CANSAVE, "Yes|Some|some"),
          STIPENDCHNG = str_detect(STIPENDCHNG, "Yes")) %>%
-  # Refactor DEPT, YEAR, GRADYR, CONTLENGTH, GURNT, AGE, PERINCRENT, PERINCTMR, 
-  # TRANSPO, ACADCOST, HRSWORK, EXPNSE as factors
+# Refactor DEPT, YEAR, GRADYR, CONTLENGTH, GURNT, AGE, PERINCRENT, PERINCTMR, 
+# TRANSPO, ACADCOST, HRSWORK, EXPNSE as factors
   mutate(DEPT = as.factor(DEPT),
          YEAR = as.ordered(YEAR) %>% 
            fct_relevel(c("1st", "2nd", "3rd", 
@@ -140,17 +140,19 @@ tidy_survey_data = raw_survey_data %>%
          HRSWORK = as.ordered(HRSWORK) %>%
            fct_relevel(c("Less than 10 hours", "10 hours", "20 hours",
                          "21-25 hours", "26-39 hours", "40+ hours"))) %>%
-  # Recode RACETH into standard DARS categories
+# Recode RACETH into standard DARS categories
   mutate(RACETH = DARS_ethnicity_coding(RACETH, INTNTL)) %>%
-  # Recode GENDER; unfortunately DARS only includes traditional male/female
-  # gender identities so while I am including an "Other" factor it cannot
-  # be directly compared to broader data
+# Recode GENDER; unfortunately DARS only includes traditional male/female
+# gender identities so while I am including an "Other" factor it cannot
+# be directly compared to broader data
   mutate(GENDER = as.factor(GENDER) %>% fct_collapse(
     Male = c("Male", "Cis Male", "Man", "Male/man", "M", "Cisgender Male"),
     Female = c("Female", "Cis Female", "Woman", "Woman/female", "F", 
                "cis woman", "female", "cis female", "FEMALE", "she/her/hers"),
     other_level = "Other"
-  ))
+  )) %>%
+# Clean up the PERINCTMR column based on PERINCRENT
+  mutate(PERINCTMR = coalesce(PERINCRENT))
 # Output cleaned results to a .csv for sharing with others
 write.csv(tidy_survey_data, file = "tidy_gse_survey.csv", row.names = FALSE)
 # Write out column descriptions for sharing with others
