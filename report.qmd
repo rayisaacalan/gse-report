@@ -1,7 +1,12 @@
 ---
 title: "GSE Report"
-format: pdf
-documentclass: article
+format: 
+  pdf:
+    include-in-header:
+      text: |
+        \usepackage{typearea}
+        \storeareas\normalpapersize
+documentclass: scrreprt
 keep-tex: true
 ---
 
@@ -9,12 +14,9 @@ keep-tex: true
 source("survey-data-processing.R")
 N_response = nrow(tidy_survey_data)
 library(kableExtra)
+library(ggpubr)
+library(cowplot)
 ```
-
-
-# Descriptive Statistics
-
-## Response Demographics
 
 ```{r base-plot, include=FALSE}
 label_truncate = function(string, length){
@@ -25,34 +27,11 @@ base_plot = function(label_length) {
   ggplot(tidy_survey_data) + 
   theme(axis.text.x = element_text(angle=60, hjust=1), legend.position = "bottom") +
   scale_x_discrete(labels = ~label_truncate(., length = label_length)) +
-  ylim(0, NA)
+  ylim(0, NA) 
 }
 ```
 
-```{r department, echo=FALSE}
-base_plot(12) +
-  geom_bar(aes(x = fct_infreq(DEPT))) +
-  labs(x = "Department", y = "Response Count")
-```
-```{r year, echo=FALSE}
-base_plot(12) +
-  geom_bar(aes(x = YEAR)) +
-  labs(x = "Program Year", y = "Response Count")
-```
-
-```{r age, echo=FALSE}
-base_plot(12) +
-  geom_bar(aes(x = AGE)) +
-  labs(x = "Age Bracket", y = "Response Count")
-```
-
-```{r raceth, echo=FALSE}
-base_plot(18) +
-  geom_bar(aes(x = fct_infreq(RACETH))) +
-  labs(x = "DARS Ethnicity Category", y = "Response Count")
-```
-
-
+# Descriptive Statistics
 
 ## Respondent Needs
 
@@ -69,7 +48,8 @@ summarise(tidy_survey_data,
 ```{r rent, echo=FALSE}
 base_plot(18) +
   geom_bar(aes(x = PERINCRENT, fill = ROOMIE), position = "stack") +
-  labs(x = "Pct. of Income Spent on Rent", y = "Response Count", fill = "Roomate")
+  labs(x = "Pct. of Income Spent on Rent", y = "Response Count", fill = "Roomate") +
+  scale_fill_viridis_d(direction = -1, na.value="darkgrey")
 ```
 
 ```{r rent-no-roommate, echo=FALSE}
@@ -103,9 +83,9 @@ ggplot(tidy_survey_data) +
   geom_histogram(aes(x = NETINC, fill = EXTRNLFUNDED), bins = 20) +
   labs(x = "Monthly Individual Net Income ($)", y = "Response Count", fill = "External Funding") +
   lims(x = c(1000, 4000), y = c(0, 20)) + 
-  theme(axis.text.x = element_text(angle=60, hjust=1), legend.position = "bottom")
+  theme(axis.text.x = element_text(angle=60, hjust=1), legend.position = "bottom") +
+  scale_fill_viridis_d(direction = -1, na.value="darkgrey")
 ```
-
 
 ```{r current-sem-support, echo=FALSE}
 summarise(tidy_survey_data,
@@ -137,11 +117,199 @@ base_plot(18) +
   labs(x = "Hours Worked per Week", y = "Response Count")
 ```
 
+<!-- Create a landscape page for the big plot -->
 
+```{=tex}
+\cleardoublepage
+\KOMAoptions{paper=landscape,pagesize}
+\recalctypearea
+\areaset{1.2\textwidth}{1.2\textheight}
+```
+## Crosstabs - Years in Program
 
+```{r yip-funding, echo = FALSE}
+yip_fund_plot = base_plot(12) +
+  geom_bar(aes(x = YEAR, fill = EXTRNLFUNDED), position = "fill") +
+  labs(x = "Year in Program", y = "Proportion", fill = "External Funds") +
+  scale_fill_viridis_d(direction = -1, na.value="darkgrey") +       
+  theme(text = element_text(size = 8))  
+```
 
+```{r yip-without, echo = FALSE}
+yip_without_plot = base_plot(12) +
+  geom_bar(aes(x = YEAR, fill = WITHOUT), position = "fill") +
+  labs(x = "Year in Program", y = "Proportion", fill = "Going Without") +
+  scale_fill_viridis_d(direction = -1, na.value="darkgrey") +        
+  theme(text = element_text(size = 8))  
+```
 
+```{r yip-unexpense, echo = FALSE}
+yip_unexpense_plot = base_plot(12) +
+  geom_bar(aes(x = YEAR, fill = EXPNSE), position = "fill") +
+  labs(x = "Year in Program", y = "Proportion", fill = "Handle Unexp. Expn.") +
+  scale_fill_viridis_d(direction = -1, na.value="darkgrey") +        
+  theme(text = element_text(size = 8))  
+```
 
+```{r yip-loans, echo = FALSE}
+yip_loans_plot = base_plot(12) +
+  geom_bar(aes(x = YEAR, fill = (LOANS1 | LOANS2)), position = "fill") +
+  labs(x = "Year in Program", y = "Proportion", fill = "Taken Loans") +
+  scale_fill_viridis_d(direction = -1, na.value="darkgrey") +        
+  theme(text = element_text(size = 8))  
+```
 
+```{r yip-plot-out, echo = FALSE, out.width = '100%', out.height = '100%'}
+plot_grid(yip_fund_plot, yip_without_plot, yip_unexpense_plot, yip_loans_plot,
+          ncol = 2, nrow = 2)
+```
 
+```{r yip-rent, echo = FALSE, out.width = '100%', out.height = '100%'}
+base_plot(12) +
+  geom_bar(aes(x = YEAR, fill = PERINCRENT), position = "fill") +
+  labs(x = "Year in Program", y = "Proportion", fill = "Percent of Income spent on Rent") +
+  scale_fill_viridis_d(direction = -1, na.value="darkgrey") +        
+  theme(text = element_text(size = 10))  
+```
 
+## Crosstabs - Externally Funded
+
+```{r extnl-year, echo = FALSE, out.width = '100%', out.height = '100%'}
+extnl_year_plot = base_plot(12) +
+  geom_bar(aes(x = EXTRNLFUNDED, fill = YEAR), position = "fill") +
+  labs(x = "Externally Funded", y = "Proportion", fill = "Year in Program") +
+  scale_fill_viridis_d(direction = -1, na.value="darkgrey") +       
+  theme(text = element_text(size = 8))  
+
+extnl_year_plot
+```
+
+```{r extnl-without, echo = FALSE}
+extnl_without_plot = base_plot(12) +
+  geom_bar(aes(x = EXTRNLFUNDED, fill = WITHOUT), position = "stack") +
+  labs(x = "Externally Funded", y = "Count", fill = "Going Without") +
+  scale_fill_viridis_d(direction = -1, na.value="darkgrey") +        
+  theme(text = element_text(size = 8))  
+```
+
+```{r extnl-unexpense, echo = FALSE}
+extnl_unexpense_plot = base_plot(12) +
+  geom_bar(aes(x = EXTRNLFUNDED, fill = EXPNSE), position = "stack") +
+  labs(x = "Externally Funded", y = "Count", fill = "Handle Unexp. Expn.") +
+  scale_fill_viridis_d(direction = -1, na.value="darkgrey") +        
+  theme(text = element_text(size = 8))  
+```
+
+```{r extnl-loans, echo = FALSE}
+extnl_loans_plot = base_plot(12) +
+  geom_bar(aes(x = EXTRNLFUNDED, fill = (LOANS1 | LOANS2)), position = "stack") +
+  labs(x = "Externally Funded", y = "Count", fill = "Taken Loans") +
+  scale_fill_viridis_d(direction = -1, na.value="darkgrey") +        
+  theme(text = element_text(size = 8))  
+```
+
+```{r extnl-plot-out, echo = FALSE, out.width = '100%', out.height = '100%'}
+plot_grid(extnl_without_plot, extnl_unexpense_plot, extnl_loans_plot,
+          ncol = 2, nrow = 2)
+```
+
+```{r extnl-rent, echo = FALSE, out.width = '100%', out.height = '100%'}
+base_plot(12) +
+  geom_bar(aes(x = EXTRNLFUNDED, fill = PERINCRENT), position = "fill") +
+  labs(x = "Externally Funded", y = "Proportion", fill = "Percent of Income spent on Rent") +
+  scale_fill_viridis_d(direction = -1, na.value="darkgrey") +        
+  theme(text = element_text(size = 10))  
+```
+
+## Response Demographics
+
+```{r department, echo=FALSE}
+dept_plot = base_plot(12) +
+  geom_bar(aes(x = fct_infreq(DEPT))) +
+  labs(x = "Department", y = "Responses")
+```
+
+```{r year, echo=FALSE}
+year_plot = base_plot(12) +
+  geom_bar(aes(x = YEAR)) +
+  labs(x = "Program Year", y = "Responses")
+```
+
+```{r age, echo=FALSE}
+age_plot = base_plot(12) +
+  geom_bar(aes(x = AGE)) +
+  labs(x = "Age Bracket", y = "Responses")
+```
+
+```{r raceth, echo=FALSE}
+raceth_plot = base_plot(12) +
+  geom_bar(aes(x = fct_infreq(RACETH))) +
+  labs(x = "DARS Ethnicity Category", y = "Responses")
+```
+
+```{r demog-plot-out, echo = FALSE, out.width = '100%', out.height = '100%'}
+plot_grid(dept_plot, year_plot, age_plot, raceth_plot,
+          ncol = 2, nrow = 2)
+```
+
+<!-- Return to portrait page -->
+
+```{=tex}
+\cleardoublepage
+\normalpapersize
+\recalctypearea
+```
+## Budget Example
+
+Suppose a 'typical' student based on these responses (median central
+tendencies):
+
+-   They are on a 9-month assistantship contract
+-   They are paid the new minimum stipend of \$22,222.22
+-   They do not have an external funding source or are not eligible to
+    seek external employment
+
+Based on the 2023 fair rent rates [from the Department of Housing and
+Urban Development](https://www.huduser.gov/portal/datasets/fmr.html)
+which are under the median prices for the area, the student can expect
+to pay \$900 monthly for a one bedroom apartment, or \$1,020 monthly for
+a two bedroom apartment (\$510 if split with a roommate). The expected
+electric bill averaged over the year using Bryan Utility rates is
+\$100/mo for the one bedroom, or \$150/mo for the two bedroom (\$75/mo
+if split with a roommate). The expected water & wastewater bill is
+\$30/mo or \$20/mo with a roommate. The expected monthly internet
+expense for B/CS not including cable is \$50 in areas with one provider
+and \$40 in areas with more than one provider. Many apartments cover
+additional utilities such as trash, but others charge an additional
+\$20/mo. In total this works out to \$1070-1100/mo for essential living
+expenses living without a roommate or \$625-650/mo with one. Based on
+income, this works out to approximately 35% of income with a roommate or
+58% of income without a roommate. These figures are consistent with the
+observed survey responses. Based on 2019 rates, these costs would be
+significantly different; approximately 49% of income without a roommate
+and 31% of income with a roommate.[^1]
+
+[^1]: While it is anecdotal; as someone who has lived in Bryan/College
+    Station since 2018 these price figures have tracked to my own living
+    expenses within about 5% year over year
+
+Based on the survey responses, the median transportation cost is
+approximately 15% of income or about \$3,300.
+
+Based on the survey responses, since the majority of people did not
+report academic costs it won't be included.
+
+Based on the [December 2022 report from the
+USDA](https://www.fns.usda.gov/sites/default/files/media/file/CostofFoodDec2022Thrifty.pdf),
+the expected cost of food following a thrifty grocery plan is
+\$240-300/mo; or about 13% of income. Based on 2019 rates, these costs
+would be significantly different; approximately 9% of income.
+
+With these rates in mind; we can project that an aggressively thrifty
+student who relies only on their assistantship for their income is
+projected to spend about 63% of their income only on getting to and from
+work, a place to live, and food. A thrifty student without a roommate is
+projected to spend about 86% on the same.
+
+Notably; these figures do not include other expenses such as insurance,
+medical/healthcare, debt payments and saving, or personal spending.
